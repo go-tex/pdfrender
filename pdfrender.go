@@ -26,6 +26,20 @@ func Rasterize(pdf []byte, dpi float64) (image.Image, error) {
 	return RasterizePage(pdf, 1, dpi)
 }
 
+// NumPages reports how many pages a PDF document holds, or 0 when it cannot be
+// opened. go-tex/engine's \includepdf needs it to resolve pdfpages' ranges —
+// pages={2-5} and pages=- name a count the document alone knows — and counting
+// "/Type /Page" in the bytes does not work on a PDF whose page tree lives in an
+// object stream, which most modern writers produce.
+func NumPages(pdf []byte) int {
+	r, err := render.NewRenderer(pdf)
+	if err != nil {
+		return 0
+	}
+	defer r.Close()
+	return r.NumPages()
+}
+
 // RasterizePage renders a specific 1-based page of a PDF document at the given DPI.
 func RasterizePage(pdf []byte, page int, dpi float64) (image.Image, error) {
 	r, err := render.NewRenderer(pdf)
