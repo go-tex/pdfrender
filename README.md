@@ -7,12 +7,12 @@
 Pure-Go (CGO=0) rasteriser for **PDF figures**, shaped to plug into
 [go-tex/engine](https://github.com/go-tex/engine)'s `RasterizePDF` seam so
 `\includegraphics` of a vector `.pdf` typesets as a real raster instead of a
-placeholder. A thin wrapper over the reference renderer
-[github.com/ajroetker/pdf/render](https://github.com/ajroetker/pdf).
+placeholder. A thin wrapper over
+[go-pdfkit/render](https://github.com/go-pdfkit/render).
 
 ## Why a separate module
 
-A pure-Go PDF renderer is a heavy dependency (pdfcpu and friends). The engine core —
+A pure-Go PDF renderer is a heavy dependency. The engine core —
 and its browser/wasm build — stay free of it: the engine exposes a `func` seam, and
 a consumer that wants PDF figures (the CLI, loom) opts in with one line.
 
