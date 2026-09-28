@@ -3,13 +3,13 @@ module github.com/go-tex/pdfrender
 go 1.26.4
 
 require (
+	github.com/go-gfx/gfx v0.34.0
 	github.com/go-pdfkit/reader v0.6.0
 	github.com/go-pdfkit/render v0.60.0
 )
 
 require (
 	github.com/ajroetker/go-highway v0.0.12 // indirect
-	github.com/go-gfx/gfx v0.34.0 // indirect
 	github.com/go-images/jpeg v0.1.0 // indirect
 	github.com/go-images/jpeg2000 v0.9.1 // indirect
 	github.com/go-opentype/fonts v0.10.0 // indirect
