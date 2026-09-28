@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"image"
 
+	"github.com/go-gfx/gfx/raster"
 	"github.com/go-pdfkit/reader"
 	"github.com/go-pdfkit/render"
 )
@@ -49,11 +50,41 @@ func RasterizePage(pdf []byte, page int, dpi float64) (image.Image, error) {
 	if n := d.PageCount(); page < 1 || page > n {
 		return nil, fmt.Errorf("pdfrender: page %d out of range (1..%d)", page, n)
 	}
-	img, err := render.Page(d, page, render.Options{DPI: dpi})
+	img, err := renderFitting(d, page, dpi)
 	if err != nil {
 		return nil, fmt.Errorf("pdfrender: render page %d: %w", page, err)
 	}
 	// raster.Image's At returns a color.RGBA, not a color.Color, so it is not
 	// an image.Image; NRGBA is what a caller encoding or compositing expects.
 	return img.ToNRGBA(), nil
+}
+
+// halvings is how many times renderFitting will halve the resolution before it
+// gives up. Four takes 150 dpi down to about 9, which is past any figure that
+// could be worth drawing, and 1/256th of the pixels of the first attempt.
+const halvings = 4
+
+// renderFitting draws a page at dpi, halving the resolution and trying again
+// while the renderer refuses the size.
+//
+// render.Page bounds what it will allocate: past forty megapixels it returns an
+// error rather than a very large image. That bound is written for a PAGE, and a
+// figure is not one. One of the 770 figures in the go-tex corpus is 13580 by
+// 8153 pixels at 150 dpi — a hundred and ten megapixels, 443 MB of RGBA before
+// the NRGBA copy — and it is a figure that will be scaled into a text column,
+// where a tenth of that resolution is already more than the page can show.
+//
+// The refusal is made from the page box alone, before anything is drawn, so a
+// refused attempt costs nothing and there is no need to guess the size first.
+func renderFitting(d *reader.Document, page int, dpi float64) (*raster.Image, error) {
+	var err error
+	for i := 0; i <= halvings; i++ {
+		var img *raster.Image
+		img, err = render.Page(d, page, render.Options{DPI: dpi})
+		if err == nil {
+			return img, nil
+		}
+		dpi /= 2
+	}
+	return nil, err
 }
