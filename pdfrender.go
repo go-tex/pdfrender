@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
 // Package pdfrender rasterises a PDF page to an image in pure Go (CGO=0). It is a
-// thin wrapper over the reference renderer github.com/ajroetker/pdf/render, shaped
-// to plug straight into go-tex/engine's RasterizePDF seam:
+// thin wrapper over github.com/go-pdfkit/render, shaped to plug straight into
+// go-tex/engine's RasterizePDF seam:
 //
 //	engine.RasterizePDF = pdfrender.Rasterize
 //
@@ -17,7 +17,8 @@ import (
 	"fmt"
 	"image"
 
-	"github.com/ajroetker/pdf/render"
+	"github.com/go-pdfkit/reader"
+	"github.com/go-pdfkit/render"
 )
 
 // Rasterize renders the first page of a PDF document to an image at the given DPI.
@@ -32,27 +33,27 @@ func Rasterize(pdf []byte, dpi float64) (image.Image, error) {
 // "/Type /Page" in the bytes does not work on a PDF whose page tree lives in an
 // object stream, which most modern writers produce.
 func NumPages(pdf []byte) int {
-	r, err := render.NewRenderer(pdf)
+	d, err := reader.Open(pdf)
 	if err != nil {
 		return 0
 	}
-	defer r.Close()
-	return r.NumPages()
+	return d.PageCount()
 }
 
 // RasterizePage renders a specific 1-based page of a PDF document at the given DPI.
 func RasterizePage(pdf []byte, page int, dpi float64) (image.Image, error) {
-	r, err := render.NewRenderer(pdf)
+	d, err := reader.Open(pdf)
 	if err != nil {
 		return nil, fmt.Errorf("pdfrender: open: %w", err)
 	}
-	defer r.Close()
-	if page < 1 || page > r.NumPages() {
-		return nil, fmt.Errorf("pdfrender: page %d out of range (1..%d)", page, r.NumPages())
+	if n := d.PageCount(); page < 1 || page > n {
+		return nil, fmt.Errorf("pdfrender: page %d out of range (1..%d)", page, n)
 	}
-	img, err := r.RenderPage(page, dpi)
+	img, err := render.Page(d, page, render.Options{DPI: dpi})
 	if err != nil {
 		return nil, fmt.Errorf("pdfrender: render page %d: %w", page, err)
 	}
-	return img, nil
+	// raster.Image's At returns a color.RGBA, not a color.Color, so it is not
+	// an image.Image; NRGBA is what a caller encoding or compositing expects.
+	return img.ToNRGBA(), nil
 }
